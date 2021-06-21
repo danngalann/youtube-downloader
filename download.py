@@ -5,6 +5,7 @@ DESCRIPTION = "A command line tool to download YouTube videos and songs"
 parser = argparse.ArgumentParser(description=DESCRIPTION)
 parser.add_argument("url", help="Video URL")
 parser.add_argument("-o", "--output", help="Output directory")
+parser.add_argument("-f", "--format", help="Video format", default='mp4')
 parser.add_argument("-a", "--audio", action="store_true", help="Download audio only")
 parser.add_argument("-q", "--limitless", action="store_true", help="Remove 1080p quality upper limit")
 args = parser.parse_args()
@@ -13,6 +14,8 @@ LIMIT = True
 AUDIO_ONLY = False
 URL = args.url
 RESOLUTIONS = [
+    '2160p',
+    '1440p',
     '1080p',
     '720p',
     '360p'
@@ -40,7 +43,7 @@ def download(video, path):
             os.rename(videoFileName, 'video_' + videoFileName)
             audioStream.download(path, filename_prefix='audio_')
 
-            mergeCommand = f'ffmpeg -i video_"{videoFileName}" -i "audio_{audioFileName}" -c:v copy -c:a aac "{videoFileName}"'
+            mergeCommand = f'ffmpeg -i video_"{videoFileName}" -i "audio_{audioFileName}" -c:v copy -c:a aac "{videoFileName[:-5]}.{args.format}"'
             execute(mergeCommand)
 
             os.remove(f'video_{videoFileName}')
@@ -56,9 +59,10 @@ def download(video, path):
 def getVideoStream(video):
     videoStream = None
     streams = video.streams
-    #TODO: Enable 4k download if LIMIT=False
-    for resolution in RESOLUTIONS:
-        videoStream = streams.filter(res=resolution, mime_type='video/mp4').first()
+    resolutions = RESOLUTIONS if not LIMIT else RESOLUTIONS[2:]
+
+    for resolution in resolutions:
+        videoStream = streams.filter(res=resolution, mime_type='video/webm').first()
         if videoStream is not None:
             break
 
