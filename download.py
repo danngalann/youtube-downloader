@@ -1,9 +1,10 @@
 from pytube import YouTube
-import argparse
+import argparse, subprocess, os
 
 DESCRIPTION = "A command line tool to download YouTube videos and songs"
 parser = argparse.ArgumentParser(description=DESCRIPTION)
 parser.add_argument("url", help="Video URL")
+parser.add_argument("-o", "--output", help="Output directory")
 parser.add_argument("-a", "--audio", action="store_true", help="Download audio only")
 parser.add_argument("-q", "--limitless", action="store_true", help="Remove 1080p quality upper limit")
 args = parser.parse_args()
@@ -26,13 +27,30 @@ if args.limitless:
 video = YouTube(URL)
 
 def download(video, path):
-    print(f"Downloading {video.title}")
-    videoStream = getVideoStream(video)
-    videoStream.download(path)
+    os.chdir(path)
+    print(f"Downloading {video.title}")    
+    audioStream = getAudioStream(video)
+    audioFileName = audioStream.default_filename
 
-    if not videoStream.includes_audio_track:
-        #TODO Download and merge audio
-        pass
+    if not AUDIO_ONLY:
+        videoStream = getVideoStream(video)
+        videoStream.download(path)
+        videoFileName = videoStream.default_filename
+        if not videoStream.includes_audio_track:
+            os.rename(videoFileName, 'video_' + videoFileName)
+            audioStream.download(path, filename_prefix='audio_')
+
+            mergeCommand = f'ffmpeg -i video_"{videoFileName}" -i "audio_{audioFileName}" -c:v copy -c:a aac "{videoFileName}"'
+            subprocess.call(mergeCommand, shell=True)
+
+            os.remove(f'video_{videoFileName}')
+            os.remove(f'audio_{audioFileName}')
+    else:
+        audioStream.download(path)
+        extractAudioCommand = f'ffmpeg -i "{audioFileName}" "{audioFileName[:-4]}".mp3'
+        subprocess.call(extractAudioCommand, shell=True)
+        os.remove(audioFileName)
+
 
 # Get highest available stream
 def getVideoStream(video):
@@ -46,4 +64,7 @@ def getVideoStream(video):
 
     return videoStream
 
-download(video, r'c:\Users\danngalann\Desktop')
+def getAudioStream(video):
+    return video.streams.filter(only_audio=True, mime_type='audio/mp4').first()
+
+download(video, args.output)
