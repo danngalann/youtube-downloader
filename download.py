@@ -41,14 +41,14 @@ def download(video, path):
             audioStream.download(path, filename_prefix='audio_')
 
             mergeCommand = f'ffmpeg -i video_"{videoFileName}" -i "audio_{audioFileName}" -c:v copy -c:a aac "{videoFileName}"'
-            subprocess.call(mergeCommand, shell=True)
+            execute(mergeCommand)
 
             os.remove(f'video_{videoFileName}')
             os.remove(f'audio_{audioFileName}')
     else:
         audioStream.download(path)
         extractAudioCommand = f'ffmpeg -i "{audioFileName}" "{audioFileName[:-4]}".mp3'
-        subprocess.call(extractAudioCommand, shell=True)
+        execute(extractAudioCommand)
         os.remove(audioFileName)
 
 
@@ -66,5 +66,12 @@ def getVideoStream(video):
 
 def getAudioStream(video):
     return video.streams.filter(only_audio=True, mime_type='audio/mp4').first()
+
+def execute(command):
+    subprocess.run(
+        command, 
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
 
 download(video, args.output)
