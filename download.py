@@ -1,14 +1,18 @@
 from pytube import YouTube
 from pytube.cli import on_progress
-import argparse, subprocess, os
+import argparse
+import subprocess
+import os
 
 DESCRIPTION = "A command line tool to download YouTube videos and songs"
 parser = argparse.ArgumentParser(description=DESCRIPTION)
 parser.add_argument("url", help="Video URL")
 parser.add_argument("-o", "--output", help="Output directory")
 parser.add_argument("-f", "--format", help="Video format", default='mp4')
-parser.add_argument("-a", "--audio", action="store_true", help="Download audio only")
-parser.add_argument("-q", "--limitless", action="store_true", help="Remove 1080p quality upper limit")
+parser.add_argument("-a", "--audio", action="store_true",
+                    help="Download audio only")
+parser.add_argument("-q", "--limitless", action="store_true",
+                    help="Remove 1080p quality upper limit")
 args = parser.parse_args()
 
 LIMIT = True
@@ -30,9 +34,10 @@ if args.limitless:
 
 video = YouTube(URL, on_progress_callback=on_progress)
 
+
 def download(video, path):
     os.chdir(path)
-    print(f"Downloading '{video.title}'")    
+    print(f"Downloading '{video.title}'")
     audioStream = getAudioStream(video)
     audioFileName = audioStream.default_filename
 
@@ -51,7 +56,7 @@ def download(video, path):
 
             os.remove(f'video_{videoFileName}')
             os.remove(f'audio_{audioFileName}')
-    else:        
+    else:
         audioStream.download(path)
         extractAudioCommand = f'ffmpeg -i "{audioFileName}" "{audioFileName[:-4]}".mp3'
         execute(extractAudioCommand)
@@ -65,21 +70,25 @@ def getVideoStream(video):
     resolutions = RESOLUTIONS if not LIMIT else RESOLUTIONS[2:]
 
     for resolution in resolutions:
-        videoStream = streams.filter(res=resolution, mime_type='video/webm').first()
+        videoStream = streams.filter(
+            res=resolution, mime_type='video/webm').first()
         if videoStream is not None:
             break
 
     return videoStream
 
+
 def getAudioStream(video):
     return video.streams.filter(only_audio=True, mime_type='audio/mp4').first()
 
+
 def execute(command):
     subprocess.run(
-        command, 
+        command,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.STDOUT
     )
+
 
 download(video, args.output)
 print('\nDONE.')
