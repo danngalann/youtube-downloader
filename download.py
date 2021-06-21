@@ -1,4 +1,5 @@
 from pytube import YouTube
+from pytube.cli import on_progress
 import argparse, subprocess, os
 
 DESCRIPTION = "A command line tool to download YouTube videos and songs"
@@ -27,11 +28,11 @@ if args.audio:
 if args.limitless:
     LIMIT = False
 
-video = YouTube(URL)
+video = YouTube(URL, on_progress_callback=on_progress)
 
 def download(video, path):
     os.chdir(path)
-    print(f"Downloading {video.title}")    
+    print(f"Downloading '{video.title}'")    
     audioStream = getAudioStream(video)
     audioFileName = audioStream.default_filename
 
@@ -40,15 +41,17 @@ def download(video, path):
         videoStream.download(path)
         videoFileName = videoStream.default_filename
         if not videoStream.includes_audio_track:
+            print("\nDownloading audio...")
             os.rename(videoFileName, 'video_' + videoFileName)
             audioStream.download(path, filename_prefix='audio_')
 
+            print("\nMerging audio...")
             mergeCommand = f'ffmpeg -i video_"{videoFileName}" -i "audio_{audioFileName}" -c:v copy -c:a aac "{videoFileName[:-5]}.{args.format}"'
             execute(mergeCommand)
 
             os.remove(f'video_{videoFileName}')
             os.remove(f'audio_{audioFileName}')
-    else:
+    else:        
         audioStream.download(path)
         extractAudioCommand = f'ffmpeg -i "{audioFileName}" "{audioFileName[:-4]}".mp3'
         execute(extractAudioCommand)
@@ -79,3 +82,4 @@ def execute(command):
     )
 
 download(video, args.output)
+print('\nDONE.')
